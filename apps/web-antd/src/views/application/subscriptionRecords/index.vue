@@ -10,11 +10,7 @@ import { isEmpty } from '@vben/utils';
 import { message } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
-import {
-  deletePost,
-  deletePostList,
-  getPostPage,
-} from '#/api/system/post';
+import { deletePost, deletePostList, getPostPage } from '#/api/system/post';
 import { $t } from '#/locales';
 
 import { useGridColumns, useGridFormSchema } from './data';
