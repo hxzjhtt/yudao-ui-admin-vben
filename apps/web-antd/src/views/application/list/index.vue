@@ -1,41 +1,27 @@
 <script lang="ts" setup>
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemRoleApi } from '#/api/system/role';
+import type { SystemPostApi } from '#/api/system/post';
 
 import { ref } from 'vue';
 
-import { DocAlert, Page, useVbenModal } from '@vben/common-ui';
-import { downloadFileFromBlobPart, isEmpty } from '@vben/utils';
+import { Page, useVbenModal } from '@vben/common-ui';
+import { isEmpty } from '@vben/utils';
 
 import { message } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
-  deleteRole,
-  deleteRoleList,
-  exportRole,
-  getRolePage,
-} from '#/api/system/role';
+  deletePost,
+  deletePostList,
+  getPostPage,
+} from '#/api/system/post';
 import { $t } from '#/locales';
 
 import { useGridColumns, useGridFormSchema } from './data';
-import AssignDataPermissionForm from './modules/assign-data-permission-form.vue';
-import AssignMenuForm from './modules/assign-menu-form.vue';
 import Form from './modules/form.vue';
 
 const [FormModal, formModalApi] = useVbenModal({
   connectedComponent: Form,
-  destroyOnClose: true,
-});
-
-const [AssignDataPermissionFormModel, assignDataPermissionFormApi] =
-  useVbenModal({
-    connectedComponent: AssignDataPermissionForm,
-    destroyOnClose: true,
-  });
-
-const [AssignMenuFormModel, assignMenuFormApi] = useVbenModal({
-  connectedComponent: AssignMenuForm,
   destroyOnClose: true,
 });
 
@@ -44,30 +30,24 @@ function onRefresh() {
   gridApi.query();
 }
 
-/** 导出表格 */
-async function handleExport() {
-  const data = await exportRole(await gridApi.formApi.getValues());
-  downloadFileFromBlobPart({ fileName: '角色.xls', source: data });
-}
-
-/** 编辑角色 */
-function handleEdit(row: SystemRoleApi.Role) {
-  formModalApi.setData(row).open();
-}
-
-/** 创建角色 */
+/** 创建岗位 */
 function handleCreate() {
   formModalApi.setData(null).open();
 }
 
-/** 删除角色 */
-async function handleDelete(row: SystemRoleApi.Role) {
+/** 编辑岗位 */
+function handleEdit(row: SystemPostApi.Post) {
+  formModalApi.setData(row).open();
+}
+
+/** 删除岗位 */
+async function handleDelete(row: SystemPostApi.Post) {
   const hideLoading = message.loading({
     content: $t('ui.actionMessage.deleting', [row.name]),
     key: 'action_key_msg',
   });
   try {
-    await deleteRole(row.id as number);
+    await deletePost(row.id as number);
     message.success({
       content: $t('ui.actionMessage.deleteSuccess', [row.name]),
       key: 'action_key_msg',
@@ -82,12 +62,12 @@ const checkedIds = ref<number[]>([]);
 function handleRowCheckboxChange({
   records,
 }: {
-  records: SystemRoleApi.Role[];
+  records: SystemPostApi.Post[];
 }) {
   checkedIds.value = records.map((item) => item.id as number);
 }
 
-/** 批量删除角色 */
+/** 批量删除岗位 */
 async function handleDeleteBatch() {
   const hideLoading = message.loading({
     content: $t('ui.actionMessage.deleting'),
@@ -95,22 +75,12 @@ async function handleDeleteBatch() {
     key: 'action_process_msg',
   });
   try {
-    await deleteRoleList(checkedIds.value);
+    await deletePostList(checkedIds.value);
     message.success($t('ui.actionMessage.deleteSuccess'));
     onRefresh();
   } finally {
     hideLoading();
   }
-}
-
-/** 分配角色的数据权限 */
-function handleAssignDataPermission(row: SystemRoleApi.Role) {
-  assignDataPermissionFormApi.setData(row).open();
-}
-
-/** 分配角色的菜单权限 */
-function handleAssignMenu(row: SystemRoleApi.Role) {
-  assignMenuFormApi.setData(row).open();
 }
 
 const [Grid, gridApi] = useVbenVxeGrid({
@@ -124,7 +94,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
-          return await getRolePage({
+          return await getPostPage({
             pageNo: page.currentPage,
             pageSize: page.pageSize,
             ...formValues,
@@ -140,7 +110,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       refresh: true,
       search: true,
     },
-  } as VxeTableGridOptions<SystemRoleApi.Role>,
+  } as VxeTableGridOptions<SystemPostApi.Post>,
   gridEvents: {
     checkboxAll: handleRowCheckboxChange,
     checkboxChange: handleRowCheckboxChange,
@@ -151,25 +121,16 @@ const [Grid, gridApi] = useVbenVxeGrid({
 <template>
   <Page auto-content-height>
     <FormModal @success="onRefresh" />
-    <AssignDataPermissionFormModel @success="onRefresh" />
-    <AssignMenuFormModel @success="onRefresh" />
-    <Grid table-title="角色列表">
+    <Grid table-title="岗位列表">
       <template #toolbar-tools>
         <TableAction
           :actions="[
             {
-              label: $t('ui.actionTitle.create', ['角色']),
+              label: $t('ui.actionTitle.create', ['岗位']),
               type: 'primary',
               icon: ACTION_ICON.ADD,
-              auth: ['system:role:create'],
+              auth: ['system:post:create'],
               onClick: handleCreate,
-            },
-            {
-              label: $t('ui.actionTitle.export'),
-              type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:role:export'],
-              onClick: handleExport,
             },
             {
               label: '批量删除',
@@ -177,7 +138,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               danger: true,
               disabled: isEmpty(checkedIds),
               icon: ACTION_ICON.DELETE,
-              auth: ['system:role:delete'],
+              auth: ['system:post:delete'],
               onClick: handleDeleteBatch,
             },
           ]"
@@ -190,7 +151,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               label: $t('common.edit'),
               type: 'link',
               icon: ACTION_ICON.EDIT,
-              auth: ['system:role:update'],
+              auth: ['system:post:update'],
               onClick: handleEdit.bind(null, row),
             },
             {
@@ -198,25 +159,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
               type: 'link',
               danger: true,
               icon: ACTION_ICON.DELETE,
-              auth: ['system:role:delete'],
+              auth: ['system:post:delete'],
               popConfirm: {
                 title: $t('ui.actionMessage.deleteConfirm', [row.name]),
                 confirm: handleDelete.bind(null, row),
               },
-            },
-          ]"
-          :drop-down-actions="[
-            {
-              label: '数据权限',
-              type: 'link',
-              auth: ['system:permission:assign-role-data-scope'],
-              onClick: handleAssignDataPermission.bind(null, row),
-            },
-            {
-              label: '菜单权限',
-              type: 'link',
-              auth: ['system:permission:assign-role-menu'],
-              onClick: handleAssignMenu.bind(null, row),
             },
           ]"
         />

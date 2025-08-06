@@ -1,26 +1,21 @@
 <script lang="ts" setup>
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemRoleApi } from '#/api/system/role';
+import type { SystemDeptApi } from '#/api/system/dept';
+import type { SystemUserApi } from '#/api/system/user';
 
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 
-import { DocAlert, Page, useVbenModal } from '@vben/common-ui';
-import { downloadFileFromBlobPart, isEmpty } from '@vben/utils';
+import { Page, useVbenModal } from '@vben/common-ui';
+import { isEmpty } from '@vben/utils';
 
 import { message } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
-import {
-  deleteRole,
-  deleteRoleList,
-  exportRole,
-  getRolePage,
-} from '#/api/system/role';
+import { deleteDept, deleteDeptList, getDeptList } from '#/api/system/dept';
+import { getSimpleUserList } from '#/api/system/user';
 import { $t } from '#/locales';
 
-import { useGridColumns, useGridFormSchema } from './data';
-import AssignDataPermissionForm from './modules/assign-data-permission-form.vue';
-import AssignMenuForm from './modules/assign-menu-form.vue';
+import { useGridColumns } from './data';
 import Form from './modules/form.vue';
 
 const [FormModal, formModalApi] = useVbenModal({
@@ -28,46 +23,48 @@ const [FormModal, formModalApi] = useVbenModal({
   destroyOnClose: true,
 });
 
-const [AssignDataPermissionFormModel, assignDataPermissionFormApi] =
-  useVbenModal({
-    connectedComponent: AssignDataPermissionForm,
-    destroyOnClose: true,
-  });
+const userList = ref<SystemUserApi.User[]>([]);
 
-const [AssignMenuFormModel, assignMenuFormApi] = useVbenModal({
-  connectedComponent: AssignMenuForm,
-  destroyOnClose: true,
-});
+/** 获取负责人名称 */
+function getLeaderName(userId: number) {
+  return userList.value.find((user) => user.id === userId)?.nickname;
+}
 
 /** 刷新表格 */
 function onRefresh() {
   gridApi.query();
 }
 
-/** 导出表格 */
-async function handleExport() {
-  const data = await exportRole(await gridApi.formApi.getValues());
-  downloadFileFromBlobPart({ fileName: '角色.xls', source: data });
+/** 切换树形展开/收缩状态 */
+const isExpanded = ref(true);
+function toggleExpand() {
+  isExpanded.value = !isExpanded.value;
+  gridApi.grid.setAllTreeExpand(isExpanded.value);
 }
 
-/** 编辑角色 */
-function handleEdit(row: SystemRoleApi.Role) {
-  formModalApi.setData(row).open();
-}
-
-/** 创建角色 */
+/** 创建 */
 function handleCreate() {
   formModalApi.setData(null).open();
 }
 
-/** 删除角色 */
-async function handleDelete(row: SystemRoleApi.Role) {
+/** 添加下级 */
+function handleAppend(row: SystemDeptApi.Dept) {
+  formModalApi.setData({ parentId: row.id }).open();
+}
+
+/** 编辑 */
+function handleEdit(row: SystemDeptApi.Dept) {
+  formModalApi.setData(row).open();
+}
+
+/** 删除 */
+async function handleDelete(row: SystemDeptApi.Dept) {
   const hideLoading = message.loading({
     content: $t('ui.actionMessage.deleting', [row.name]),
     key: 'action_key_msg',
   });
   try {
-    await deleteRole(row.id as number);
+    await deleteDept(row.id as number);
     message.success({
       content: $t('ui.actionMessage.deleteSuccess', [row.name]),
       key: 'action_key_msg',
@@ -82,12 +79,12 @@ const checkedIds = ref<number[]>([]);
 function handleRowCheckboxChange({
   records,
 }: {
-  records: SystemRoleApi.Role[];
+  records: SystemDeptApi.Dept[];
 }) {
   checkedIds.value = records.map((item) => item.id as number);
 }
 
-/** 批量删除角色 */
+/** 批量删除 */
 async function handleDeleteBatch() {
   const hideLoading = message.loading({
     content: $t('ui.actionMessage.deleting'),
@@ -95,7 +92,7 @@ async function handleDeleteBatch() {
     key: 'action_process_msg',
   });
   try {
-    await deleteRoleList(checkedIds.value);
+    await deleteDeptList(checkedIds.value);
     message.success($t('ui.actionMessage.deleteSuccess'));
     onRefresh();
   } finally {
@@ -103,34 +100,19 @@ async function handleDeleteBatch() {
   }
 }
 
-/** 分配角色的数据权限 */
-function handleAssignDataPermission(row: SystemRoleApi.Role) {
-  assignDataPermissionFormApi.setData(row).open();
-}
-
-/** 分配角色的菜单权限 */
-function handleAssignMenu(row: SystemRoleApi.Role) {
-  assignMenuFormApi.setData(row).open();
-}
-
 const [Grid, gridApi] = useVbenVxeGrid({
-  formOptions: {
-    schema: useGridFormSchema(),
-  },
   gridOptions: {
-    columns: useGridColumns(),
+    columns: useGridColumns(getLeaderName),
     height: 'auto',
-    keepSource: true,
     proxyConfig: {
       ajax: {
-        query: async ({ page }, formValues) => {
-          return await getRolePage({
-            pageNo: page.currentPage,
-            pageSize: page.pageSize,
-            ...formValues,
-          });
+        query: async () => {
+          return await getDeptList();
         },
       },
+    },
+    pagerConfig: {
+      enabled: false,
     },
     rowConfig: {
       keyField: 'id',
@@ -140,36 +122,44 @@ const [Grid, gridApi] = useVbenVxeGrid({
       refresh: true,
       search: true,
     },
-  } as VxeTableGridOptions<SystemRoleApi.Role>,
+    treeConfig: {
+      transform: true,
+      rowField: 'id',
+      parentField: 'parentId',
+      expandAll: true,
+      accordion: false,
+    },
+  } as VxeTableGridOptions<SystemDeptApi.Dept>,
   gridEvents: {
     checkboxAll: handleRowCheckboxChange,
     checkboxChange: handleRowCheckboxChange,
   },
+});
+
+/** 初始化 */
+onMounted(async () => {
+  userList.value = await getSimpleUserList();
 });
 </script>
 
 <template>
   <Page auto-content-height>
     <FormModal @success="onRefresh" />
-    <AssignDataPermissionFormModel @success="onRefresh" />
-    <AssignMenuFormModel @success="onRefresh" />
-    <Grid table-title="角色列表">
+    <Grid table-title="应用分类列表">
       <template #toolbar-tools>
         <TableAction
           :actions="[
             {
-              label: $t('ui.actionTitle.create', ['角色']),
+              label: $t('ui.actionTitle.create', ['分类']),
               type: 'primary',
               icon: ACTION_ICON.ADD,
-              auth: ['system:role:create'],
+              auth: ['application:classification:create'],
               onClick: handleCreate,
             },
             {
-              label: $t('ui.actionTitle.export'),
+              label: isExpanded ? '收缩' : '展开',
               type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:role:export'],
-              onClick: handleExport,
+              onClick: toggleExpand,
             },
             {
               label: '批量删除',
@@ -177,7 +167,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
               danger: true,
               disabled: isEmpty(checkedIds),
               icon: ACTION_ICON.DELETE,
-              auth: ['system:role:delete'],
+              auth: ['application:classification:delete'],
               onClick: handleDeleteBatch,
             },
           ]"
@@ -187,10 +177,17 @@ const [Grid, gridApi] = useVbenVxeGrid({
         <TableAction
           :actions="[
             {
+              label: '新增下级',
+              type: 'link',
+              icon: ACTION_ICON.ADD,
+              auth: ['application:classification:create'],
+              onClick: handleAppend.bind(null, row),
+            },
+            {
               label: $t('common.edit'),
               type: 'link',
               icon: ACTION_ICON.EDIT,
-              auth: ['system:role:update'],
+              auth: ['application:classification:update'],
               onClick: handleEdit.bind(null, row),
             },
             {
@@ -198,25 +195,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
               type: 'link',
               danger: true,
               icon: ACTION_ICON.DELETE,
-              auth: ['system:role:delete'],
+              auth: ['application:classification:delete'],
+              disabled: !!(row.children && row.children.length > 0),
               popConfirm: {
                 title: $t('ui.actionMessage.deleteConfirm', [row.name]),
                 confirm: handleDelete.bind(null, row),
               },
-            },
-          ]"
-          :drop-down-actions="[
-            {
-              label: '数据权限',
-              type: 'link',
-              auth: ['system:permission:assign-role-data-scope'],
-              onClick: handleAssignDataPermission.bind(null, row),
-            },
-            {
-              label: '菜单权限',
-              type: 'link',
-              auth: ['system:permission:assign-role-menu'],
-              onClick: handleAssignMenu.bind(null, row),
             },
           ]"
         />

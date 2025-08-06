@@ -1,0 +1,94 @@
+{
+  "folders": [
+    {
+      "name": "@vben/web-antd",
+      "path": "apps/web-antd"
+    },
+    {
+      "name": "@vben-core/base",
+      "path": "packages/@core/base"
+    },
+    {
+      "name": "@vben-core/composables",
+      "path": "packages/@core/composables"
+    },
+    {
+      "name": "@vben-core/preferences",
+      "path": "packages/@core/preferences"
+    },
+    {
+      "name": "@vben/constants",
+      "path": "packages/constants"
+    },
+    {
+      "name": "@vben/access",
+      "path": "packages/effects/access"
+    },
+    {
+      "name": "@vben/common-ui",
+      "path": "packages/effects/common-ui"
+    },
+    {
+      "name": "@vben/hooks",
+      "path": "packages/effects/hooks"
+    },
+    {
+      "name": "@vben/layouts",
+      "path": "packages/effects/layouts"
+    },
+    {
+      "name": "@vben/plugins",
+      "path": "packages/effects/plugins"
+    },
+    {
+      "name": "@vben/request",
+      "path": "packages/effects/request"
+    },
+    {
+      "name": "@vben/icons",
+      "path": "packages/icons"
+    },
+    {
+      "name": "@vben/locales",
+      "path": "packages/locales"
+    },
+    {
+      "name": "@vben/preferences",
+      "path": "packages/preferences"
+    },
+    {
+      "name": "@vben/stores",
+      "path": "packages/stores"
+    },
+    {
+      "name": "@vben/styles",
+      "path": "packages/styles"
+    },
+    {
+      "name": "@vben/types",
+      "path": "packages/types"
+    },
+    {
+      "name": "@vben/utils",
+      "path": "packages/utils"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.includePackageJsonAutoImports": "on",
+    "typescript.suggest.autoImports": true,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "vue.volar",
+      "vue.vscode-typescript-vue-plugin",
+      "antfu.unocss",
+      "bradlc.vscode-tailwindcss",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint"
+    ]
+  }
+} 
