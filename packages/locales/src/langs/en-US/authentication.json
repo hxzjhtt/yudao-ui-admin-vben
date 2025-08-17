@@ -57,5 +57,13 @@
     "center": "Align Center",
     "alignLeft": "Align Left",
     "alignRight": "Align Right"
+  },
+  "sso": {
+    "authorizationScope": "Authorization Scope",
+    "thirdPartyAppRequest": "This third-party application requests the following permissions:",
+    "agreeAuthorization": "Agree Authorization",
+    "reject": "Reject",
+    "accessPersonalInfo": "Access your personal information",
+    "modifyPersonalInfo": "Modify your personal information"
   }
 }

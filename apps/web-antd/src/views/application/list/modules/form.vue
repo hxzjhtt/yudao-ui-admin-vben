@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { SystemPostApi } from '#/api/system/post';
+import type { ApplicationList } from '#/api/application/list';
 
 import { computed, ref } from 'vue';
 
@@ -8,17 +8,22 @@ import { useVbenModal } from '@vben/common-ui';
 import { message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
-import { createPost, getPost, updatePost } from '#/api/system/post';
+import { getClassificationList } from '#/api/application/classification';
+import {
+  createApplication,
+  getApplication,
+  updateApplication,
+} from '#/api/application/list';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
 
 const emit = defineEmits(['success']);
-const formData = ref<SystemPostApi.Post>();
+const formData = ref<ApplicationList.Application>();
 const getTitle = computed(() => {
   return formData.value?.id
-    ? $t('ui.actionTitle.edit', ['岗位'])
-    : $t('ui.actionTitle.create', ['岗位']);
+    ? $t('ui.actionTitle.edit', ['应用'])
+    : $t('ui.actionTitle.create', ['应用']);
 });
 
 const [Form, formApi] = useVbenForm({
@@ -27,7 +32,7 @@ const [Form, formApi] = useVbenForm({
       class: 'w-full',
     },
     formItemClass: 'col-span-2',
-    labelWidth: 80,
+    labelWidth: 100,
   },
   layout: 'horizontal',
   schema: useFormSchema(),
@@ -42,9 +47,28 @@ const [Modal, modalApi] = useVbenModal({
     }
     modalApi.lock();
     // 提交表单
-    const data = (await formApi.getValues()) as SystemPostApi.Post;
+    const values = (await formApi.getValues()) as Record<string, any>;
+    // 计算父子分类ID：仅允许选择二级，ccategoryId=所选ID，pcategoryId=其父ID
+    if (values.categoryId) {
+      try {
+        const { list } = await getClassificationList();
+        const selected = list.find((it: any) => it.id === values.categoryId);
+        values.ccategoryId = values.categoryId;
+        values.pcategoryId = selected?.pid ?? undefined;
+        // 同步主分类字段
+        values.appCategoryId = values.ccategoryId;
+      } catch {
+        // 忽略分类计算错误，避免阻塞提交
+      }
+    }
+    const data = values as ApplicationList.Application & {
+      ccategoryId?: string;
+      pcategoryId?: string;
+    };
     try {
-      await (formData.value?.id ? updatePost(data) : createPost(data));
+      await (formData.value?.id
+        ? updateApplication(data)
+        : createApplication(data));
       // 关闭并提示
       await modalApi.close();
       emit('success');
@@ -59,15 +83,24 @@ const [Modal, modalApi] = useVbenModal({
       return;
     }
     // 加载数据
-    const data = modalApi.getData<SystemPostApi.Post>();
-    if (!data || !data.id) {
+    const incoming = modalApi.getData<ApplicationList.Application>();
+    if (!incoming) return;
+    if (!incoming.id) {
+      // 新建
       return;
     }
     modalApi.lock();
     try {
-      formData.value = await getPost(data.id as number);
-      // 设置到 values
-      await formApi.setValues(formData.value);
+      const detail = await getApplication(incoming.id as string);
+      formData.value = detail;
+      const values: Record<string, any> = { ...detail };
+      // 回显分类：优先使用后端 ccategoryId，否则使用 appCategoryId
+      if ((detail as any).ccategoryId) {
+        values.categoryId = (detail as any).ccategoryId;
+      } else if (detail.appCategoryId) {
+        values.categoryId = detail.appCategoryId as any;
+      }
+      await formApi.setValues(values);
     } finally {
       modalApi.unlock();
     }

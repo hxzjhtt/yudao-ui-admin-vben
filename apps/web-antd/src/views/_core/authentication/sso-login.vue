@@ -8,6 +8,7 @@ import { AuthenticationAuthTitle, VbenButton } from '@vben/common-ui';
 
 import { useVbenForm } from '#/adapter/form';
 import { authorize, getAuthorize } from '#/api/system/oauth2/open';
+import { $t } from '#/locales';
 
 defineOptions({ name: 'SSOLogin' });
 
@@ -132,10 +133,10 @@ function formatScope(scope: string) {
   // 这里仅仅是一个 demo，可以考虑录入到字典数据中，例如说字典类型 "system_oauth2_scope"，它的每个 scope 都是一条字典数据。
   switch (scope) {
     case 'user.read': {
-      return '访问你的个人信息';
+      return $t('authentication.sso.accessPersonalInfo');
     }
     case 'user.write': {
-      return '修改你的个人信息';
+      return $t('authentication.sso.modifyPersonalInfo');
     }
     default: {
       return scope;
@@ -147,7 +148,7 @@ const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
       fieldName: 'scopes',
-      label: '授权范围',
+      label: $t('authentication.sso.authorizationScope'),
       component: 'CheckboxGroup',
       componentProps: {
         options: queryParams.scopes.map((scope) => ({
@@ -185,7 +186,7 @@ onMounted(() => {
       </slot>
       <template #desc>
         <span class="text-muted-foreground">
-          此第三方应用请求获得以下权限：
+          {{ $t('authentication.sso.thirdPartyAppRequest') }}
         </span>
       </template>
     </AuthenticationAuthTitle>
@@ -202,7 +203,7 @@ onMounted(() => {
         class="w-2/3"
         @click="handleSubmit(true)"
       >
-        同意授权
+        {{ $t('authentication.sso.agreeAuthorization') }}
       </VbenButton>
       <VbenButton
         :class="{
@@ -214,7 +215,7 @@ onMounted(() => {
         variant="outline"
         @click="handleSubmit(false)"
       >
-        拒绝
+        {{ $t('authentication.sso.reject') }}
       </VbenButton>
     </div>
   </div>

@@ -143,5 +143,14 @@
     "btn_zoom_in": "Zoom in",
     "btn_zoom_out": "Zoom out",
     "preview": "Preview"
+  },
+  "oauth2": {
+    "title": "OAuth 2.0 (SSO Single Sign-On)",
+    "client": "OAuth2.0 Client",
+    "token": "OAuth2.0 Token"
+  },
+  "social": {
+    "title": "Third-party Login",
+    "client": "Social Client"
   }
 }

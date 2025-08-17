@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { SystemDeptApi } from '#/api/system/dept';
+import type { ApplicationClassification } from '#/api/application/classification';
 
 import { computed, ref } from 'vue';
 
@@ -8,17 +8,21 @@ import { useVbenModal } from '@vben/common-ui';
 import { message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
-import { createDept, getDept, updateDept } from '#/api/system/dept';
+import {
+  createClassification,
+  getClassification,
+  updateClassification,
+} from '#/api/application/classification';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
 
 const emit = defineEmits(['success']);
-const formData = ref<SystemDeptApi.Dept>();
+const formData = ref<ApplicationClassification.Classification>();
 const getTitle = computed(() => {
   return formData.value?.id
-    ? $t('ui.actionTitle.edit', ['部门'])
-    : $t('ui.actionTitle.create', ['部门']);
+    ? $t('ui.actionTitle.edit', ['应用分类'])
+    : $t('ui.actionTitle.create', ['应用分类']);
 });
 
 const [Form, formApi] = useVbenForm({
@@ -42,9 +46,12 @@ const [Modal, modalApi] = useVbenModal({
     }
     modalApi.lock();
     // 提交表单
-    const data = (await formApi.getValues()) as SystemDeptApi.Dept;
+    const data =
+      (await formApi.getValues()) as ApplicationClassification.Classification;
     try {
-      await (formData.value?.id ? updateDept(data) : createDept(data));
+      await (formData.value?.id
+        ? updateClassification(data)
+        : createClassification(data));
       // 关闭并提示
       await modalApi.close();
       emit('success');
@@ -59,14 +66,14 @@ const [Modal, modalApi] = useVbenModal({
       return;
     }
     // 加载数据
-    let data = modalApi.getData<SystemDeptApi.Dept>();
+    let data = modalApi.getData<ApplicationClassification.Classification>();
     if (!data) {
       return;
     }
     if (data.id) {
       modalApi.lock();
       try {
-        data = await getDept(data.id);
+        data = await getClassification(data.id);
       } finally {
         modalApi.unlock();
       }

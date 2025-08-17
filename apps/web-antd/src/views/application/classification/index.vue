@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemDeptApi } from '#/api/system/dept';
-import type { SystemUserApi } from '#/api/system/user';
+import type { ApplicationClassification } from '#/api/application/classification';
 
 import { onMounted, ref } from 'vue';
 
@@ -11,8 +10,11 @@ import { isEmpty } from '@vben/utils';
 import { message } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deleteDept, deleteDeptList, getDeptList } from '#/api/system/dept';
-import { getSimpleUserList } from '#/api/system/user';
+import {
+  deleteClassification,
+  deleteClassificationList,
+  getClassificationList,
+} from '#/api/application/classification';
 import { $t } from '#/locales';
 
 import { useGridColumns } from './data';
@@ -22,13 +24,6 @@ const [FormModal, formModalApi] = useVbenModal({
   connectedComponent: Form,
   destroyOnClose: true,
 });
-
-const userList = ref<SystemUserApi.User[]>([]);
-
-/** 获取负责人名称 */
-function getLeaderName(userId: number) {
-  return userList.value.find((user) => user.id === userId)?.nickname;
-}
 
 /** 刷新表格 */
 function onRefresh() {
@@ -48,25 +43,25 @@ function handleCreate() {
 }
 
 /** 添加下级 */
-function handleAppend(row: SystemDeptApi.Dept) {
-  formModalApi.setData({ parentId: row.id }).open();
+function handleAppend(row: ApplicationClassification.Classification) {
+  formModalApi.setData({ pid: row.id }).open();
 }
 
 /** 编辑 */
-function handleEdit(row: SystemDeptApi.Dept) {
+function handleEdit(row: ApplicationClassification.Classification) {
   formModalApi.setData(row).open();
 }
 
 /** 删除 */
-async function handleDelete(row: SystemDeptApi.Dept) {
+async function handleDelete(row: ApplicationClassification.Classification) {
   const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting', [row.name]),
+    content: $t('ui.actionMessage.deleting', [row.appCategoryName]),
     key: 'action_key_msg',
   });
   try {
-    await deleteDept(row.id as number);
+    await deleteClassification(row.id as number);
     message.success({
-      content: $t('ui.actionMessage.deleteSuccess', [row.name]),
+      content: $t('ui.actionMessage.deleteSuccess', [row.appCategoryName]),
       key: 'action_key_msg',
     });
     onRefresh();
@@ -79,7 +74,7 @@ const checkedIds = ref<number[]>([]);
 function handleRowCheckboxChange({
   records,
 }: {
-  records: SystemDeptApi.Dept[];
+  records: ApplicationClassification.Classification[];
 }) {
   checkedIds.value = records.map((item) => item.id as number);
 }
@@ -92,7 +87,7 @@ async function handleDeleteBatch() {
     key: 'action_process_msg',
   });
   try {
-    await deleteDeptList(checkedIds.value);
+    await deleteClassificationList(checkedIds.value);
     message.success($t('ui.actionMessage.deleteSuccess'));
     onRefresh();
   } finally {
@@ -102,12 +97,13 @@ async function handleDeleteBatch() {
 
 const [Grid, gridApi] = useVbenVxeGrid({
   gridOptions: {
-    columns: useGridColumns(getLeaderName),
+    columns: useGridColumns(),
     height: 'auto',
     proxyConfig: {
       ajax: {
         query: async () => {
-          return await getDeptList();
+          const { list } = await getClassificationList();
+          return list;
         },
       },
     },
@@ -125,11 +121,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     treeConfig: {
       transform: true,
       rowField: 'id',
-      parentField: 'parentId',
+      parentField: 'pid',
       expandAll: true,
       accordion: false,
     },
-  } as VxeTableGridOptions<SystemDeptApi.Dept>,
+  } as VxeTableGridOptions<ApplicationClassification.Classification>,
   gridEvents: {
     checkboxAll: handleRowCheckboxChange,
     checkboxChange: handleRowCheckboxChange,
@@ -137,9 +133,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 });
 
 /** 初始化 */
-onMounted(async () => {
-  userList.value = await getSimpleUserList();
-});
+onMounted(async () => {});
 </script>
 
 <template>
@@ -181,6 +175,7 @@ onMounted(async () => {
               type: 'link',
               icon: ACTION_ICON.ADD,
               auth: ['application:classification:create'],
+              ifShow: row.pid === '0',
               onClick: handleAppend.bind(null, row),
             },
             {
@@ -198,7 +193,9 @@ onMounted(async () => {
               auth: ['application:classification:delete'],
               disabled: !!(row.children && row.children.length > 0),
               popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                title: $t('ui.actionMessage.deleteConfirm', [
+                  row.appCategoryName,
+                ]),
                 confirm: handleDelete.bind(null, row),
               },
             },

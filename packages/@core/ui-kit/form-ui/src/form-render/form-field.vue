@@ -296,7 +296,7 @@ onUnmounted(() => {
         'form-valid-error': isInValid,
         'form-is-required': shouldRequired,
         'flex-col': isVertical,
-        'flex-row items-center': !isVertical,
+        'flex-row items-baseline': !isVertical,
         'pb-6': !compact,
         'pb-2': compact,
       }"

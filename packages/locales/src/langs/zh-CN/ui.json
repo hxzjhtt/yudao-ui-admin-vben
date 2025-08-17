@@ -143,5 +143,14 @@
     "btn_zoom_in": "放大",
     "btn_zoom_out": "缩小",
     "preview": "预览"
+  },
+  "oauth2": {
+    "title": "OAuth 2.0（SSO 单点登录）",
+    "client": "OAuth2.0 客户端",
+    "token": "OAuth2.0 令牌"
+  },
+  "social": {
+    "title": "三方登录",
+    "client": "社交客户端"
   }
 }

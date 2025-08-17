@@ -1,13 +1,10 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemDeptApi } from '#/api/system/dept';
+import type { ApplicationClassification } from '#/api/application/classification';
 
 import { handleTree } from '@vben/utils';
 
-import { z } from '#/adapter/form';
-import { getDeptList } from '#/api/system/dept';
-import { getSimpleUserList } from '#/api/system/user';
-import { CommonStatusEnum, DICT_TYPE, getDictOptions } from '#/utils';
+import { getClassificationList } from '#/api/application/classification';
 
 /** 新增/修改的表单 */
 export function useFormSchema(): VbenFormSchema[] {
@@ -21,122 +18,72 @@ export function useFormSchema(): VbenFormSchema[] {
       },
     },
     {
-      fieldName: 'parentId',
-      label: '上级部门',
+      fieldName: 'pid',
+      label: '上级分类',
       component: 'ApiTreeSelect',
       componentProps: {
         allowClear: true,
         api: async () => {
-          const data = await getDeptList();
-          data.unshift({
-            id: 0,
-            name: '顶级部门',
+          const { list } = await getClassificationList();
+          list.unshift({
+            id: '0',
+            appCategoryName: '顶级分类',
           });
-          return handleTree(data);
+          return handleTree(
+            list.filter(
+              (item: ApplicationClassification.Classification) =>
+                item.pid === '0' || item.id === '0',
+            ),
+            'id',
+            'pid',
+            'children',
+          );
         },
-        labelField: 'name',
+        labelField: 'appCategoryName',
         valueField: 'id',
         childrenField: 'children',
-        placeholder: '请选择上级部门',
+        placeholder: '请选择上级分类',
         treeDefaultExpandAll: true,
       },
       rules: 'selectRequired',
     },
     {
-      fieldName: 'name',
-      label: '部门名称',
+      fieldName: 'appCategoryName',
+      label: '分类名称',
       component: 'Input',
       componentProps: {
-        placeholder: '请输入部门名称',
+        placeholder: '请输入分类名称',
       },
       rules: 'required',
     },
     {
       fieldName: 'sort',
-      label: '显示顺序',
+      label: '排序',
       component: 'InputNumber',
       componentProps: {
         min: 0,
         controlsPosition: 'right',
-        placeholder: '请输入显示顺序',
+        placeholder: '请输入排序',
       },
       rules: 'required',
-    },
-    {
-      fieldName: 'leaderUserId',
-      label: '负责人',
-      component: 'ApiSelect',
-      componentProps: {
-        api: getSimpleUserList,
-        labelField: 'nickname',
-        valueField: 'id',
-        placeholder: '请选择负责人',
-        allowClear: true,
-      },
-      rules: z.number().optional(),
-    },
-    {
-      fieldName: 'phone',
-      label: '联系电话',
-      component: 'Input',
-      componentProps: {
-        maxLength: 11,
-        placeholder: '请输入联系电话',
-      },
-      rules: 'mobileRequired',
-    },
-    {
-      fieldName: 'email',
-      label: '邮箱',
-      component: 'Input',
-      componentProps: {
-        placeholder: '请输入邮箱',
-      },
-      rules: z.string().email('请输入正确的邮箱地址').optional(),
-    },
-    {
-      fieldName: 'status',
-      label: '状态',
-      component: 'RadioGroup',
-      componentProps: {
-        options: getDictOptions(DICT_TYPE.COMMON_STATUS, 'number'),
-        buttonStyle: 'solid',
-        optionType: 'button',
-      },
-      rules: z.number().default(CommonStatusEnum.ENABLE),
     },
   ];
 }
 
 /** 列表的字段 */
-export function useGridColumns(
-  getLeaderName?: (userId: number) => string | undefined,
-): VxeTableGridOptions<SystemDeptApi.Dept>['columns'] {
+export function useGridColumns(): VxeTableGridOptions<ApplicationClassification.Classification>['columns'] {
   return [
     { type: 'checkbox', width: 40 },
     {
-      field: 'name',
-      title: '部门名称',
+      field: 'appCategoryName',
+      title: '分类名称',
       align: 'left',
       fixed: 'left',
       treeNode: true,
     },
     {
-      field: 'leaderUserId',
-      title: '负责人',
-      formatter: ({ cellValue }) => getLeaderName?.(cellValue) || '-',
-    },
-    {
       field: 'sort',
-      title: '显示顺序',
-    },
-    {
-      field: 'status',
-      title: '部门状态',
-      cellRender: {
-        name: 'CellDict',
-        props: { type: DICT_TYPE.COMMON_STATUS },
-      },
+      title: '排序',
     },
     {
       field: 'createTime',

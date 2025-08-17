@@ -57,5 +57,13 @@
     "center": "居中",
     "alignLeft": "居左",
     "alignRight": "居右"
+  },
+  "sso": {
+    "authorizationScope": "授权范围",
+    "thirdPartyAppRequest": "此第三方应用请求获得以下权限：",
+    "agreeAuthorization": "同意授权",
+    "reject": "拒绝",
+    "accessPersonalInfo": "访问你的个人信息",
+    "modifyPersonalInfo": "修改你的个人信息"
   }
 }
