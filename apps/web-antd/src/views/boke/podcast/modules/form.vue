@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { SystemPostApi } from '#/api/system/post';
+import type { Podcast } from '#/api/boke/podcast';
 
 import { computed, ref } from 'vue';
 
@@ -8,17 +8,17 @@ import { useVbenModal } from '@vben/common-ui';
 import { message } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
-import { createPost, getPost, updatePost } from '#/api/system/post';
+import { createPodcast, getPodcast, updatePodcast } from '#/api/boke/podcast';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
 
 const emit = defineEmits(['success']);
-const formData = ref<SystemPostApi.Post>();
+const formData = ref<Podcast.PodcastInfo>();
 const getTitle = computed(() => {
   return formData.value?.id
-    ? $t('ui.actionTitle.edit', ['岗位'])
-    : $t('ui.actionTitle.create', ['岗位']);
+    ? $t('ui.actionTitle.edit', ['播客'])
+    : $t('ui.actionTitle.create', ['播客']);
 });
 
 const [Form, formApi] = useVbenForm({
@@ -27,7 +27,7 @@ const [Form, formApi] = useVbenForm({
       class: 'w-full',
     },
     formItemClass: 'col-span-2',
-    labelWidth: 80,
+    labelWidth: 100,
   },
   layout: 'horizontal',
   schema: useFormSchema(),
@@ -41,11 +41,11 @@ const [Modal, modalApi] = useVbenModal({
       return;
     }
     modalApi.lock();
-    // 提交表单
-    const data = (await formApi.getValues()) as SystemPostApi.Post;
     try {
-      await (formData.value?.id ? updatePost(data) : createPost(data));
-      // 关闭并提示
+      const values = (await formApi.getValues()) as Podcast.PodcastInfo;
+      await (formData.value?.id
+        ? updatePodcast(values)
+        : createPodcast(values));
       await modalApi.close();
       emit('success');
       message.success($t('ui.actionMessage.operationSuccess'));
@@ -58,16 +58,16 @@ const [Modal, modalApi] = useVbenModal({
       formData.value = undefined;
       return;
     }
-    // 加载数据
-    const data = modalApi.getData<SystemPostApi.Post>();
-    if (!data || !data.id) {
+    const incoming = modalApi.getData<Podcast.PodcastInfo>();
+    if (!incoming) return;
+    if (!incoming.id) {
       return;
     }
     modalApi.lock();
     try {
-      formData.value = await getPost(data.id as number);
-      // 设置到 values
-      await formApi.setValues(formData.value);
+      const detail = await getPodcast(incoming.id as string);
+      formData.value = detail.data;
+      await formApi.setValues(detail.data);
     } finally {
       modalApi.unlock();
     }

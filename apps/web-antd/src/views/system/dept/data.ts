@@ -95,6 +95,15 @@ export function useFormSchema(): VbenFormSchema[] {
       rules: z.string().email('请输入正确的邮箱地址').optional(),
     },
     {
+      component: 'RadioGroup',
+      fieldName: 'grade',
+      label: '绑定年级',
+      componentProps: {
+        options: getDictOptions(DICT_TYPE.GRADE, 'string'),
+      },
+      rules: 'required',
+    },
+    {
       fieldName: 'status',
       label: '状态',
       component: 'RadioGroup',
@@ -129,6 +138,14 @@ export function useGridColumns(
     {
       field: 'sort',
       title: '显示顺序',
+    },
+    {
+      field: 'grade',
+      title: '绑定年级',
+      cellRender: {
+        name: 'CellDict',
+        props: { type: DICT_TYPE.GRADE },
+      },
     },
     {
       field: 'status',

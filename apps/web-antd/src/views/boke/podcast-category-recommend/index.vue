@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { ApplicationList } from '#/api/application/list';
+import type { PodcastCategoryRecommend } from '#/api/boke/podcast-category-recommend';
 
 import { ref } from 'vue';
 
@@ -11,11 +11,10 @@ import { message } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
-  deleteApplication,
-  deleteApplicationList,
-  getApplicationList,
-  updateApplication,
-} from '#/api/application/list';
+  deletePodcastCategoryRecommend,
+  deletePodcastCategoryRecommendList,
+  getPodcastCategoryRecommendPage,
+} from '#/api/boke/podcast-category-recommend';
 import { $t } from '#/locales';
 
 import { useGridColumns, useGridFormSchema } from './data';
@@ -26,73 +25,31 @@ const [FormModal, formModalApi] = useVbenModal({
   destroyOnClose: true,
 });
 
-/** 刷新表格 */
 function onRefresh() {
   gridApi.query();
 }
 
-/** 创建应用 */
 function handleCreate() {
   formModalApi.setData(null).open();
 }
 
-/** 编辑应用 */
-function handleEdit(row: ApplicationList.Application) {
+function handleEdit(
+  row: PodcastCategoryRecommend.PodcastCategoryRecommendInfo,
+) {
   formModalApi.setData(row).open();
 }
 
-/** 设为精选 */
-async function handleSelected(row: ApplicationList.Application) {
+async function handleDelete(
+  row: PodcastCategoryRecommend.PodcastCategoryRecommendInfo,
+) {
   const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting', [row.appName]),
+    content: $t('ui.actionMessage.deleting', [`推荐ID: ${row.id}`]),
     key: 'action_key_msg',
   });
   try {
-    await updateApplication({
-      ...row,
-      useCarefully: true,
-    });
+    await deletePodcastCategoryRecommend(row.id as string);
     message.success({
-      content: '设为精选成功',
-      key: 'action_key_msg',
-    });
-    onRefresh();
-  } finally {
-    hideLoading();
-  }
-}
-
-/** 取消设为精选 */
-async function handleUnSelected(row: ApplicationList.Application) {
-  const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting', [row.appName]),
-    key: 'action_key_msg',
-  });
-  try {
-    await updateApplication({
-      ...row,
-      useCarefully: false,
-    });
-    message.success({
-      content: '取消精选成功',
-      key: 'action_key_msg',
-    });
-    onRefresh();
-  } finally {
-    hideLoading();
-  }
-}
-
-/** 删除应用 */
-async function handleDelete(row: ApplicationList.Application) {
-  const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting', [row.appName]),
-    key: 'action_key_msg',
-  });
-  try {
-    await deleteApplication(row.id as string);
-    message.success({
-      content: $t('ui.actionMessage.deleteSuccess', [row.appName]),
+      content: $t('ui.actionMessage.deleteSuccess', [`推荐ID: ${row.id}`]),
       key: 'action_key_msg',
     });
     onRefresh();
@@ -105,12 +62,11 @@ const checkedIds = ref<string[]>([]);
 function handleRowCheckboxChange({
   records,
 }: {
-  records: ApplicationList.Application[];
+  records: PodcastCategoryRecommend.PodcastCategoryRecommendInfo[];
 }) {
   checkedIds.value = records.map((item) => String(item.id ?? ''));
 }
 
-/** 批量删除应用 */
 async function handleDeleteBatch() {
   const hideLoading = message.loading({
     content: $t('ui.actionMessage.deleting'),
@@ -118,7 +74,7 @@ async function handleDeleteBatch() {
     key: 'action_process_msg',
   });
   try {
-    await deleteApplicationList(checkedIds.value.map(Number));
+    await deletePodcastCategoryRecommendList(checkedIds.value);
     message.success($t('ui.actionMessage.deleteSuccess'));
     onRefresh();
   } finally {
@@ -137,11 +93,12 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
-          return await getApplicationList({
+          const result = await getPodcastCategoryRecommendPage({
             pageNo: page.currentPage,
             pageSize: page.pageSize,
             ...formValues,
           });
+          return result.data;
         },
       },
     },
@@ -153,7 +110,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
       refresh: true,
       search: true,
     },
-  } as VxeTableGridOptions<ApplicationList.Application>,
+  } as VxeTableGridOptions<PodcastCategoryRecommend.PodcastCategoryRecommendInfo>,
   gridEvents: {
     checkboxAll: handleRowCheckboxChange,
     checkboxChange: handleRowCheckboxChange,
@@ -164,15 +121,14 @@ const [Grid, gridApi] = useVbenVxeGrid({
 <template>
   <Page auto-content-height>
     <FormModal @success="onRefresh" />
-    <Grid table-title="应用列表">
+    <Grid table-title="播客分类推荐管理">
       <template #toolbar-tools>
         <TableAction
           :actions="[
             {
-              label: $t('ui.actionTitle.create', ['应用']),
+              label: $t('ui.actionTitle.create', ['播客分类推荐']),
               type: 'primary',
               icon: ACTION_ICON.ADD,
-              auth: ['application:list:create'],
               onClick: handleCreate,
             },
             {
@@ -181,7 +137,6 @@ const [Grid, gridApi] = useVbenVxeGrid({
               danger: true,
               disabled: isEmpty(checkedIds),
               icon: ACTION_ICON.DELETE,
-              auth: ['application:list:delete'],
               onClick: handleDeleteBatch,
             },
           ]"
@@ -193,36 +148,16 @@ const [Grid, gridApi] = useVbenVxeGrid({
             {
               label: $t('common.edit'),
               type: 'link',
-              auth: ['application:list:update'],
               onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: '设为精选',
-              type: 'link',
-              auth: ['application:list:update'],
-              ifShow: row.useCarefully === false,
-              popConfirm: {
-                title: '确定将该应用设为精选吗？',
-                confirm: handleSelected.bind(null, row),
-              },
-            },
-            {
-              label: '取消精选',
-              type: 'link',
-              auth: ['application:list:update'],
-              ifShow: row.useCarefully === true,
-              popConfirm: {
-                title: '确定将该应用取消精选吗？',
-                confirm: handleUnSelected.bind(null, row),
-              },
             },
             {
               label: $t('common.delete'),
               type: 'link',
               danger: true,
-              auth: ['application:list:delete'],
               popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.appName]),
+                title: $t('ui.actionMessage.deleteConfirm', [
+                  `推荐ID: ${row.id}`,
+                ]),
                 confirm: handleDelete.bind(null, row),
               },
             },

@@ -117,6 +117,113 @@ export function useFormSchema(): VbenFormSchema[] {
   ];
 }
 
+export function useFormSchemaStudent(): VbenFormSchema[] {
+  return [
+    {
+      component: 'Input',
+      fieldName: 'id',
+      dependencies: {
+        triggerFields: [''],
+        show: () => false,
+      },
+    },
+    {
+      fieldName: 'studentStatusNumber',
+      label: '学籍号',
+      component: 'Input',
+      rules: 'required',
+    },
+    {
+      fieldName: 'username',
+      label: '账号/学号',
+      component: 'Input',
+      rules: 'required',
+    },
+    {
+      label: '用户密码',
+      fieldName: 'password',
+      component: 'InputPassword',
+      rules: 'required',
+      dependencies: {
+        triggerFields: ['id'],
+        show: (values) => !values.id,
+      },
+    },
+    {
+      fieldName: 'nickname',
+      label: '用户昵称',
+      component: 'Input',
+      rules: 'required',
+    },
+    {
+      fieldName: 'deptId',
+      label: '归属部门',
+      component: 'ApiTreeSelect',
+      componentProps: {
+        api: async () => {
+          const data = await getDeptList();
+          return handleTree(data);
+        },
+        labelField: 'name',
+        valueField: 'id',
+        childrenField: 'children',
+        placeholder: '请选择归属部门',
+        treeDefaultExpandAll: true,
+      },
+    },
+    {
+      fieldName: 'postIds',
+      label: '岗位',
+      component: 'ApiSelect',
+      componentProps: {
+        api: getSimplePostList,
+        labelField: 'name',
+        valueField: 'id',
+        mode: 'multiple',
+        placeholder: '请选择岗位',
+      },
+    },
+    {
+      fieldName: 'email',
+      label: '邮箱',
+      component: 'Input',
+      rules: z.string().email('邮箱格式不正确').or(z.literal('')).optional(),
+    },
+    {
+      fieldName: 'mobile',
+      label: '手机号码',
+      component: 'Input',
+    },
+    {
+      fieldName: 'sex',
+      label: '用户性别',
+      component: 'RadioGroup',
+      componentProps: {
+        options: getDictOptions(DICT_TYPE.SYSTEM_USER_SEX, 'number'),
+        buttonStyle: 'solid',
+        optionType: 'button',
+      },
+      rules: z.number().default(1),
+    },
+    {
+      fieldName: 'status',
+      label: '用户状态',
+      component: 'RadioGroup',
+      componentProps: {
+        options: getDictOptions(DICT_TYPE.COMMON_STATUS, 'number'),
+        buttonStyle: 'solid',
+        optionType: 'button',
+      },
+      rules: z.number().default(CommonStatusEnum.ENABLE),
+    },
+    {
+      fieldName: 'remark',
+      label: '备注',
+      component: 'Textarea',
+    },
+  ];
+}
+
 /** 重置密码的表单 */
 export function useResetPasswordFormSchema(): VbenFormSchema[] {
   return [
@@ -273,6 +380,10 @@ export function useGridColumns<T = SystemUserApi.User>(
     {
       field: 'username',
       title: '用户名称',
+    },
+    {
+      field: 'studentStatusNumber',
+      title: '学籍号',
     },
     {
       field: 'nickname',

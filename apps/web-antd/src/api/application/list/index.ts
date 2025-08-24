@@ -14,6 +14,7 @@ export namespace ApplicationList {
     appDescription: string;
     appStatus: string;
     createTime: Date;
+    useCarefully: boolean;
   }
   /** 应用分类信息 */
   export interface ApplicationParams {

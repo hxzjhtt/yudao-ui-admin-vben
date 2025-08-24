@@ -1,17 +1,21 @@
 <script lang="ts" setup>
-import type { FileType } from 'ant-design-vue/es/upload/interface';
+import { reactive, ref } from 'vue';
 
 import { useVbenModal } from '@vben/common-ui';
 
 import { message, Upload } from 'ant-design-vue';
 
 import { useVbenForm } from '#/adapter/form';
-import { useUpload } from '#/components/upload/use-upload';
+import { uploadFile } from '#/api/infra/file/file-upload';
 import { $t } from '#/locales';
 
-import { useFormSchema } from '../data';
-
 const emit = defineEmits(['success']);
+
+const uploadMode = ref<'backend' | 'presigned'>('backend');
+const formState = reactive({
+  file: null as File | null,
+  directory: 'uploadFiles',
+});
 
 const [Form, formApi] = useVbenForm({
   commonConfig: {
@@ -20,25 +24,72 @@ const [Form, formApi] = useVbenForm({
     },
     formItemClass: 'col-span-2',
     labelWidth: 80,
-    hideLabel: true,
   },
-  layout: 'horizontal',
-  schema: useFormSchema().map((item) => ({ ...item, label: '' })), // 去除label
+  layout: 'vertical',
+  schema: [
+    {
+      fieldName: 'uploadMode',
+      label: '上传模式',
+      component: 'Select',
+      defaultValue: 'backend',
+      componentProps: {
+        options: [
+          { label: '后端上传', value: 'backend' },
+          { label: '预签名上传', value: 'presigned' },
+        ],
+      },
+    },
+    {
+      fieldName: 'directory',
+      label: '文件目录',
+      component: 'Input',
+      defaultValue: 'uploadFiles',
+      componentProps: {
+        placeholder: '请输入文件目录',
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'file',
+      label: '选择文件',
+      component: 'Upload',
+      rules: 'required',
+      componentProps: {
+        placeholder: '请选择要上传的文件',
+        accept: '',
+        maxCount: 1,
+        beforeUpload: (file: File) => {
+          formState.file = file;
+          return false; // 阻止自动上传
+        },
+        onRemove: () => {
+          formState.file = null;
+        },
+      },
+    },
+  ],
   showDefaultActions: false,
 });
 
 const [Modal, modalApi] = useVbenModal({
   async onConfirm() {
     const { valid } = await formApi.validate();
-    if (!valid) {
+    if (!valid || !formState.file) {
       return;
     }
+
     modalApi.lock();
-    // 提交表单
-    const data = await formApi.getValues();
     try {
-      await useUpload().httpRequest(data.file);
-      // 关闭并提示
+      // 根据选择的上传模式进行处理
+      if (uploadMode.value === 'backend') {
+        await uploadFile(formState.file, formState.directory);
+      } else {
+        // 预签名上传模式，跳转到批量上传模态框
+        modalApi.close();
+        // 这里可以触发打开批量上传模态框
+        return;
+      }
+
       await modalApi.close();
       emit('success');
       message.success($t('ui.actionMessage.operationSuccess'));
@@ -48,35 +99,58 @@ const [Modal, modalApi] = useVbenModal({
   },
 });
 
-/** 上传前 */
-function beforeUpload(file: FileType) {
-  // TODO @puhui999：研究下，看看怎么类似 antd 可以前端直传哈；通过配置切换；
-  formApi.setFieldValue('file', file);
-  return false;
+function handleUploadModeChange(mode: 'backend' | 'presigned') {
+  uploadMode.value = mode;
 }
 </script>
 
 <template>
-  <Modal title="上传图片">
-    <Form class="mx-4">
+  <Modal title="上传文件">
+    <Form class="mx-4" :model="formState">
+      <template #uploadMode="{ field, value, onChange }">
+        <div class="mb-4">
+          <label class="mb-2 block text-sm font-medium">上传模式</label>
+          <select
+            :value="value"
+            @change="
+              (e) => {
+                const value = e.target.value as 'backend' | 'presigned';
+                onChange(value);
+                handleUploadModeChange(value);
+              }
+            "
+            class="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="backend">后端上传 (单文件)</option>
+            <option value="presigned">预签名上传 (多文件)</option>
+          </select>
+        </div>
+      </template>
+
       <template #file>
         <div class="w-full">
-          <!-- 上传区域 -->
-          <!-- TODO @puhui999：1）上传图片，用不了；2）底部有点遮挡 -->
           <Upload.Dragger
             name="file"
             :max-count="1"
-            accept=".jpg,.png,.gif,.webp"
-            :before-upload="beforeUpload"
-            list-type="picture-card"
+            :before-upload="
+              (file) => {
+                formState.file = file;
+                return false;
+              }
+            "
+            :show-upload-list="true"
+            :file-list="formState.file ? [formState.file] : []"
+            @remove="
+              () => {
+                formState.file = null;
+              }
+            "
           >
             <p class="ant-upload-drag-icon">
               <span class="icon-[ant-design--inbox-outlined] text-2xl"></span>
             </p>
             <p class="ant-upload-text">点击或拖拽文件到此区域上传</p>
-            <p class="ant-upload-hint">
-              支持 .jpg、.png、.gif、.webp 格式图片文件
-            </p>
+            <p class="ant-upload-hint">支持任意类型文件</p>
           </Upload.Dragger>
         </div>
       </template>

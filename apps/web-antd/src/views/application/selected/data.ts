@@ -1,88 +1,34 @@
 import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
-import { z } from '#/adapter/form';
-import {
-  CommonStatusEnum,
-  DICT_TYPE,
-  getDictOptions,
-  getRangePickerDefaultProps,
-} from '#/utils';
+import { handleTree } from '@vben/utils';
 
-/** 新增/修改的表单 */
-export function useFormSchema(): VbenFormSchema[] {
-  return [
-    {
-      component: 'Input',
-      fieldName: 'id',
-      dependencies: {
-        triggerFields: [''],
-        show: () => false,
-      },
-    },
-    {
-      component: 'Input',
-      fieldName: 'name',
-      label: '岗位名称',
-      rules: 'required',
-    },
-    {
-      component: 'Input',
-      fieldName: 'code',
-      label: '岗位编码',
-      rules: 'required',
-    },
-    {
-      fieldName: 'sort',
-      label: '显示顺序',
-      component: 'InputNumber',
-      componentProps: {
-        min: 0,
-      },
-      rules: 'required',
-    },
-    {
-      fieldName: 'status',
-      label: '岗位状态',
-      component: 'RadioGroup',
-      componentProps: {
-        options: getDictOptions(DICT_TYPE.COMMON_STATUS, 'number'),
-        buttonStyle: 'solid',
-        optionType: 'button',
-      },
-      rules: z.number().default(CommonStatusEnum.ENABLE),
-    },
-    {
-      fieldName: 'remark',
-      label: '岗位备注',
-      component: 'Textarea',
-    },
-  ];
-}
+import { getClassificationList } from '#/api/application/classification';
+import { DICT_TYPE, getDictOptions } from '#/utils';
 
 /** 列表的搜索表单 */
 export function useGridFormSchema(): VbenFormSchema[] {
   return [
-    {
-      fieldName: 'createTime',
-      label: '日期',
-      component: 'RangePicker',
-      componentProps: {
-        ...getRangePickerDefaultProps(),
-      },
-    },
     {
       fieldName: 'name',
       label: '应用名称',
       component: 'Input',
     },
     {
-      fieldName: 'status',
-      label: '应用状态',
-      component: 'Select',
+      fieldName: 'categoryId',
+      label: '应用分类',
+      component: 'ApiTreeSelect',
       componentProps: {
         allowClear: true,
-        options: getDictOptions(DICT_TYPE.COMMON_STATUS, 'number'),
+        api: async () => {
+          const { list } = await getClassificationList();
+          return handleTree(list, 'id', 'pid', 'children');
+        },
+        labelField: 'appCategoryName',
+        valueField: 'id',
+        childrenField: 'children',
+        placeholder: '请选择分类',
+        treeDefaultExpandAll: true,
       },
     },
   ];
@@ -91,43 +37,78 @@ export function useGridFormSchema(): VbenFormSchema[] {
 /** 列表的字段 */
 export function useGridColumns(): VxeTableGridOptions['columns'] {
   return [
-    { type: 'checkbox', width: 40 },
     {
       field: 'id',
-      title: '岗位编号',
+      title: '序列号',
     },
     {
-      field: 'name',
-      title: '岗位名称',
+      field: 'appName',
+      title: '应用名称',
     },
     {
-      field: 'code',
-      title: '岗位编码',
-    },
-    {
-      field: 'sort',
-      title: '显示顺序',
-    },
-    {
-      field: 'remark',
-      title: '岗位备注',
-    },
-    {
-      field: 'status',
-      title: '岗位状态',
-      cellRender: {
-        name: 'CellDict',
-        props: { type: DICT_TYPE.COMMON_STATUS },
+      field: 'appCategoryName',
+      title: '应用分类',
+      formatter: (params) => {
+        return `${params.row.pcategoryName || '-'} - ${params.row.ccategoryName || '-'}`;
       },
     },
     {
-      field: 'createTime',
-      title: '创建时间',
-      formatter: 'formatDateTime',
+      field: 'source',
+      title: '来源',
+      cellRender: {
+        name: 'CellDict',
+        props: { type: DICT_TYPE.APPLICATION_SOURCE },
+      },
+    },
+    {
+      field: 'appGrade',
+      title: '适用年级',
+      formatter: (params) => {
+        if (params.row.appGrade) {
+          const grades = getDictOptions(DICT_TYPE.GRADE, 'string');
+          const res = params.row.appGrade.map((item: string) => {
+            return (
+              grades.find((i) => i.value.toString() === item.toString())
+                .label || '-'
+            );
+          });
+          return res.join('、');
+        } else {
+          return '-';
+        }
+      },
+    },
+    {
+      field: 'subjectName',
+      title: '适用学科',
+      cellRender: {
+        name: 'CellDict',
+        props: { type: DICT_TYPE.SUBJECT },
+      },
+    },
+    {
+      field: 'packageFormat',
+      title: '定价模式',
+      cellRender: {
+        name: 'CellDict',
+        props: { type: DICT_TYPE.PRICING_MODE },
+      },
+    },
+    {
+      field: 'price',
+      title: '定价',
+    },
+    {
+      field: 'state',
+      title: '状态',
+      cellRender: {
+        name: 'CellDict',
+        props: { type: DICT_TYPE.APPLICATION_STATUS },
+      },
     },
     {
       title: '操作',
-      width: 130,
+      width: 80,
       fixed: 'right',
       slots: { default: 'actions' },
     },

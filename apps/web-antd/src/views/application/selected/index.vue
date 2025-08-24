@@ -1,78 +1,37 @@
 <script lang="ts" setup>
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
-import type { SystemPostApi } from '#/api/system/post';
+import type { ApplicationList } from '#/api/application/list';
 
-import { ref } from 'vue';
-
-import { Page, useVbenModal } from '@vben/common-ui';
-import { isEmpty } from '@vben/utils';
+import { Page } from '@vben/common-ui';
 
 import { message } from 'ant-design-vue';
 
-import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
-import { deletePost, deletePostList, getPostPage } from '#/api/system/post';
+import { TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
+import { getApplicationList, updateApplication } from '#/api/application/list';
 import { $t } from '#/locales';
 
 import { useGridColumns, useGridFormSchema } from './data';
-import Form from './modules/form.vue';
-
-const [FormModal, formModalApi] = useVbenModal({
-  connectedComponent: Form,
-  destroyOnClose: true,
-});
 
 /** 刷新表格 */
 function onRefresh() {
   gridApi.query();
 }
 
-/** 创建岗位 */
-function handleCreate() {
-  formModalApi.setData(null).open();
-}
-
-/** 编辑岗位 */
-function handleEdit(row: SystemPostApi.Post) {
-  formModalApi.setData(row).open();
-}
-
-/** 删除岗位 */
-async function handleDelete(row: SystemPostApi.Post) {
+/** 取消设为精选 */
+async function handleUnSelected(row: ApplicationList.Application) {
   const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting', [row.name]),
+    content: $t('ui.actionMessage.deleting', [row.appName]),
     key: 'action_key_msg',
   });
   try {
-    await deletePost(row.id as number);
+    await updateApplication({
+      ...row,
+      useCarefully: false,
+    });
     message.success({
-      content: $t('ui.actionMessage.deleteSuccess', [row.name]),
+      content: '取消精选成功',
       key: 'action_key_msg',
     });
-    onRefresh();
-  } finally {
-    hideLoading();
-  }
-}
-
-const checkedIds = ref<number[]>([]);
-function handleRowCheckboxChange({
-  records,
-}: {
-  records: SystemPostApi.Post[];
-}) {
-  checkedIds.value = records.map((item) => item.id as number);
-}
-
-/** 批量删除岗位 */
-async function handleDeleteBatch() {
-  const hideLoading = message.loading({
-    content: $t('ui.actionMessage.deleting'),
-    duration: 0,
-    key: 'action_process_msg',
-  });
-  try {
-    await deletePostList(checkedIds.value);
-    message.success($t('ui.actionMessage.deleteSuccess'));
     onRefresh();
   } finally {
     hideLoading();
@@ -90,10 +49,11 @@ const [Grid, gridApi] = useVbenVxeGrid({
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
-          return await getPostPage({
+          return await getApplicationList({
             pageNo: page.currentPage,
             pageSize: page.pageSize,
             ...formValues,
+            useCarefully: true,
           });
         },
       },
@@ -106,59 +66,25 @@ const [Grid, gridApi] = useVbenVxeGrid({
       refresh: true,
       search: true,
     },
-  } as VxeTableGridOptions<SystemPostApi.Post>,
-  gridEvents: {
-    checkboxAll: handleRowCheckboxChange,
-    checkboxChange: handleRowCheckboxChange,
-  },
+  } as VxeTableGridOptions<ApplicationList.Application>,
 });
 </script>
 
 <template>
   <Page auto-content-height>
     <FormModal @success="onRefresh" />
-    <Grid table-title="岗位列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['岗位']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:post:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: '批量删除',
-              type: 'primary',
-              danger: true,
-              disabled: isEmpty(checkedIds),
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:post:delete'],
-              onClick: handleDeleteBatch,
-            },
-          ]"
-        />
-      </template>
+    <Grid table-title="应用列表">
       <template #actions="{ row }">
         <TableAction
           :actions="[
             {
-              label: $t('common.edit'),
+              label: '取消精选',
               type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:post:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:post:delete'],
+              auth: ['application:list:update'],
+              ifShow: row.useCarefully === true,
               popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
+                title: '确定将该应用取消精选吗？',
+                confirm: handleUnSelected.bind(null, row),
               },
             },
           ]"

@@ -18,6 +18,7 @@ export namespace SystemUserApi {
     status: number;
     remark: string;
     createTime?: Date;
+    studentStatusNumber?: string;
   }
 }
 
@@ -85,4 +86,11 @@ export function updateUserStatus(id: number, status: number) {
 /** 获取用户精简信息列表 */
 export function getSimpleUserList() {
   return requestClient.get<SystemUserApi.User[]>('/system/user/simple-list');
+}
+
+// [跨租户]通过学籍号查询学生账户
+export function findByStudentStatusNumber(no: string) {
+  return requestClient.get<SystemUserApi.User[]>(
+    `/system/user/findByStudentStatusNumber?no=${no}`,
+  );
 }

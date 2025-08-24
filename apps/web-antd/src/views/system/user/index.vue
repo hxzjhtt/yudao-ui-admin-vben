@@ -24,12 +24,18 @@ import { DICT_TYPE, getDictLabel } from '#/utils';
 import { useGridColumns, useGridFormSchema } from './data';
 import AssignRoleForm from './modules/assign-role-form.vue';
 import DeptTree from './modules/dept-tree.vue';
+import FormStudent from './modules/form-student.vue';
 import Form from './modules/form.vue';
 import ImportForm from './modules/import-form.vue';
 import ResetPasswordForm from './modules/reset-password-form.vue';
 
 const [FormModal, formModalApi] = useVbenModal({
   connectedComponent: Form,
+  destroyOnClose: true,
+});
+
+const [FormModalStudent, formModalStudentApi] = useVbenModal({
+  connectedComponent: FormStudent,
   destroyOnClose: true,
 });
 
@@ -72,6 +78,11 @@ function handleCreate() {
   formModalApi.setData(null).open();
 }
 
+/** 创建学生 */
+function handleCreateStudent() {
+  formModalStudentApi.setData(null).open();
+}
+
 /** 导入用户 */
 function handleImport() {
   importModalApi.open();
@@ -80,6 +91,11 @@ function handleImport() {
 /** 编辑用户 */
 function handleEdit(row: SystemUserApi.User) {
   formModalApi.setData(row).open();
+}
+
+/** 编辑学生  */
+function handleEditStudent(row: SystemUserApi.User) {
+  formModalStudentApi.setData(row).open();
 }
 
 /** 删除用户 */
@@ -200,6 +216,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 <template>
   <Page auto-content-height>
     <FormModal @success="onRefresh" />
+    <FormModalStudent @success="onRefresh" />
     <ResetPasswordModal @success="onRefresh" />
     <AssignRoleModal @success="onRefresh" />
     <ImportModal @success="onRefresh" />
@@ -216,11 +233,18 @@ const [Grid, gridApi] = useVbenVxeGrid({
             <TableAction
               :actions="[
                 {
-                  label: $t('ui.actionTitle.create', ['用户']),
+                  label: $t('ui.actionTitle.create', ['老师']),
                   type: 'primary',
                   icon: ACTION_ICON.ADD,
                   auth: ['system:user:create'],
                   onClick: handleCreate,
+                },
+                {
+                  label: $t('ui.actionTitle.create', ['学生']),
+                  type: 'primary',
+                  icon: ACTION_ICON.ADD,
+                  auth: ['system:user:create'],
+                  onClick: handleCreateStudent,
                 },
                 {
                   label: $t('ui.actionTitle.export'),
@@ -256,7 +280,16 @@ const [Grid, gridApi] = useVbenVxeGrid({
                   type: 'link',
                   icon: ACTION_ICON.EDIT,
                   auth: ['system:user:update'],
+                  ifShow: row.studentStatusNumber === '',
                   onClick: handleEdit.bind(null, row),
+                },
+                {
+                  label: $t('common.edit'),
+                  type: 'link',
+                  icon: ACTION_ICON.EDIT,
+                  auth: ['system:user:update'],
+                  ifShow: row.studentStatusNumber !== '',
+                  onClick: handleEditStudent.bind(null, row),
                 },
                 {
                   label: $t('common.delete'),

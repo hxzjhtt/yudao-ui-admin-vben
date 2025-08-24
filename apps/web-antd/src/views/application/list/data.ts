@@ -235,15 +235,17 @@ export function useFormSchema(): VbenFormSchema[] {
         maxCount: 1,
         listType: 'picture-card',
         showUploadList: false,
-        beforeUpload: (file: any) => {
-          return file.size < 1024 * 1024 * 2;
+        customRequest: async (options: any) => {
+          const { file, onSuccess, onError } = options;
+          try {
+            const { uploadFile } = await import('#/api/infra/file/file-upload');
+            const result = await uploadFile(file, 'app-icons');
+            console.log(result);
+            onSuccess({ url: result || result }, file);
+          } catch (error) {
+            onError(error);
+          }
         },
-        // onChange: (info: any) => {
-        //   console.log(info);
-        // },
-        // onRemove: (file: any) => {
-        //   console.log(file);
-        // },
       },
     },
   ];
@@ -315,9 +317,19 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
     {
       field: 'appGrade',
       title: '适用年级',
-      cellRender: {
-        name: 'CellDict',
-        props: { type: DICT_TYPE.GRADE },
+      formatter: (params) => {
+        if (params.row.appGrade) {
+          const grades = getDictOptions(DICT_TYPE.GRADE, 'string');
+          const res = params.row.appGrade.map((item: string) => {
+            return (
+              grades.find((i) => i.value.toString() === item.toString())
+                .label || '-'
+            );
+          });
+          return res.join('、');
+        } else {
+          return '-';
+        }
       },
     },
     {
@@ -355,7 +367,7 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
     },
     {
       title: '操作',
-      width: 130,
+      width: 180,
       fixed: 'right',
       slots: { default: 'actions' },
     },
